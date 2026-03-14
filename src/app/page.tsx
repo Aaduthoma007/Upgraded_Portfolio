@@ -58,21 +58,22 @@ export default function HomePage() {
     return () => { mounted = false; };
   }, [initAndPreload, playBoring]);
 
-  // Click anywhere fallback to init audio
+  // Aggressive any-interaction fallback to unlock audio
   useEffect(() => {
     const handler = () => {
       if (!hasInteracted) {
         handleFirstInteraction();
       } else {
-        // If autoplay silently suspended the AudioContext, this click will force it awake
         playBoring(); 
       }
     };
-    window.addEventListener('click', handler);
-    window.addEventListener('keydown', handler);
+    
+    const events = ['click', 'keydown', 'touchstart', 'mousemove', 'scroll', 'wheel'];
+    
+    events.forEach(e => window.addEventListener(e, handler, { once: true }));
+    
     return () => {
-      window.removeEventListener('click', handler);
-      window.removeEventListener('keydown', handler);
+      events.forEach(e => window.removeEventListener(e, handler));
     };
   }, [hasInteracted, handleFirstInteraction, playBoring]);
 
