@@ -101,7 +101,7 @@ function CommandCenterFloor() {
 
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.01, 0]} receiveShadow>
         <planeGeometry args={[300, 300]} />
-        <meshPhysicalMaterial color="#040810" roughness={0.7} metalness={0.3} clearcoat={0.15} />
+        <meshStandardMaterial color="#040810" roughness={0.9} metalness={0.1} />
       </mesh>
     </>
   );
