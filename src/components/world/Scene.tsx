@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useRef, useMemo } from 'react';
+import React, { Suspense, useRef, useMemo, Component, ErrorInfo, ReactNode } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Stars, Grid } from '@react-three/drei';
 import Avatar from './Avatar';
@@ -152,12 +152,45 @@ function AtmosphericElements() {
   );
 }
 
+// Standard React ErrorBoundary to catch WebGL context drops or crashes
+class SceneErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_: Error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('WebGL/Three.js Scene crashed:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: '#0B0E17', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#E8A87C', fontFamily: 'var(--font-mono)', fontSize: 14,
+        }}>
+          [CRITICAL ERROR] 3D Environment Offline. Proceed in safe mode.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function Scene() {
   const avatarRef = useRef<THREE.Group>(null);
+  const [interactionState, setInteractionState] = React.useState<'idle' | 'reading'>('idle');
 
   return (
     <div className="world-container">
-      <Canvas
+      <SceneErrorBoundary>
+        <Canvas
         shadows
         camera={{ position: [0, 3, 8], fov: 55, near: 0.1, far: 200 }}
         gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
@@ -174,20 +207,28 @@ export default function Scene() {
         <AtmosphericElements />
 
         <Suspense fallback={null}>
-          <ThirdPersonController avatarRef={avatarRef}>
-            <Avatar ref={avatarRef} />
+          <ThirdPersonController avatarRef={avatarRef} isInteracting={interactionState === 'reading'}>
+            {({ isMoving, isRunning }: { isMoving: boolean; isRunning: boolean }) => (
+              <Avatar
+                ref={avatarRef}
+                isInteracting={interactionState === 'reading'}
+                isMoving={isMoving}
+                isRunning={isRunning}
+              />
+            )}
           </ThirdPersonController>
 
           <CinematicCamera avatarRef={avatarRef} />
 
           {/* Holographic info panels with ALL resume data */}
-          <ProjectsPanel />
-          <ExperiencePanel />
-          <EducationPanel />
-          <SkillsPanel />
-          <IdentityPanel />
+          <ProjectsPanel avatarRef={avatarRef as React.RefObject<THREE.Group>} setInteractionState={setInteractionState} />
+          <ExperiencePanel avatarRef={avatarRef as React.RefObject<THREE.Group>} setInteractionState={setInteractionState} />
+          <EducationPanel avatarRef={avatarRef as React.RefObject<THREE.Group>} setInteractionState={setInteractionState} />
+          <SkillsPanel avatarRef={avatarRef as React.RefObject<THREE.Group>} setInteractionState={setInteractionState} />
+          <IdentityPanel avatarRef={avatarRef as React.RefObject<THREE.Group>} setInteractionState={setInteractionState} />
         </Suspense>
       </Canvas>
+    </SceneErrorBoundary>
     </div>
   );
 }

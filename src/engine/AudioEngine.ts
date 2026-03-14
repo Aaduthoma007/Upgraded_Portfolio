@@ -17,22 +17,35 @@ export class AudioEngine {
     this.analyser.connect(this.ctx.destination);
   }
 
-  async preload(boringUrl: string, massUrl: string): Promise<void> {
+  async preloadBoring(boringUrl: string): Promise<void> {
     if (!this.ctx) await this.init();
     const ctx = this.ctx!;
 
-    const [boringResp, massResp] = await Promise.all([
-      fetch(boringUrl),
-      fetch(massUrl),
-    ]);
+    try {
+      const boringResp = await fetch(boringUrl);
+      if (!boringResp.ok) throw new Error(`HTTP ${boringResp.status}`);
+      const boringData = await boringResp.arrayBuffer();
+      this.boringBuffer = await ctx.decodeAudioData(boringData);
+    } catch (e) {
+      console.error('Failed to preload boring track:', e);
+      throw e; // Propagate up to UI
+    }
+  }
 
-    const [boringData, massData] = await Promise.all([
-      boringResp.arrayBuffer(),
-      massResp.arrayBuffer(),
-    ]);
+  async preloadMass(massUrl: string): Promise<void> {
+    if (!this.ctx) await this.init();
+    const ctx = this.ctx!;
 
-    this.boringBuffer = await ctx.decodeAudioData(boringData);
-    this.massBuffer = await ctx.decodeAudioData(massData);
+    try {
+      const massResp = await fetch(massUrl);
+      if (!massResp.ok) throw new Error(`HTTP ${massResp.status}`);
+      const massData = await massResp.arrayBuffer();
+      this.massBuffer = await ctx.decodeAudioData(massData);
+      console.log('Mass track preloaded in background');
+    } catch (e) {
+      console.error('Failed to preload mass track:', e);
+      // We don't throw for the mass track as it is background loaded
+    }
   }
 
   playBoring(): void {

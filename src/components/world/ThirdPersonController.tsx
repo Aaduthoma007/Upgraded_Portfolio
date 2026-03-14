@@ -1,31 +1,59 @@
 'use client';
 
-import React, { useRef, ReactNode } from 'react';
+import React, { useRef, ReactNode, useState, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useKeyboard } from '@/hooks/useKeyboard';
 
 interface ThirdPersonControllerProps {
   avatarRef: React.RefObject<THREE.Group | null>;
-  children: ReactNode;
+  isInteracting?: boolean;
+  children: ReactNode | ((state: { isMoving: boolean; isRunning: boolean }) => ReactNode);
 }
 
-export default function ThirdPersonController({ avatarRef, children }: ThirdPersonControllerProps) {
+// Panel collision boxes (position + half-extents)
+const PANEL_COLLIDERS = [
+  { pos: [-6, 0, -3], hw: 2.5, hd: 0.5 },
+  { pos: [6, 0, -3], hw: 2.3, hd: 0.5 },
+  { pos: [0, 0, -8], hw: 2.8, hd: 0.5 },
+  { pos: [-4, 0, -7], hw: 2.2, hd: 0.5 },
+  { pos: [4, 0, -7], hw: 2.0, hd: 0.5 },
+];
+
+function checkCollision(newPos: THREE.Vector3, radius: number): boolean {
+  for (const col of PANEL_COLLIDERS) {
+    const dx = Math.abs(newPos.x - col.pos[0]);
+    const dz = Math.abs(newPos.z - col.pos[2]);
+    if (dx < col.hw + radius && dz < col.hd + radius) return true;
+  }
+  return false;
+}
+
+export default function ThirdPersonController({ avatarRef, isInteracting = false, children }: ThirdPersonControllerProps) {
   const groupRef = useRef<THREE.Group>(null);
   const velocity = useRef(new THREE.Vector3());
   const direction = useRef(new THREE.Vector3());
   const keys = useKeyboard();
+  const [motionState, setMotionState] = useState({ isMoving: false, isRunning: false });
 
   const WALK_SPEED = 3.5;
   const RUN_SPEED = 7.0;
   const DAMPING = 0.88;
+  const AVATAR_RADIUS = 0.35;
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
 
+    if (isInteracting) {
+      velocity.current.multiplyScalar(0.5);
+      groupRef.current.position.add(velocity.current);
+      if (motionState.isMoving) setMotionState({ isMoving: false, isRunning: false });
+      return;
+    }
+
     const speed = keys.shift ? RUN_SPEED : WALK_SPEED;
 
-    // Calculate movement direction relative to camera
+    // Camera-relative movement
     const camera = state.camera;
     const cameraDirection = new THREE.Vector3();
     camera.getWorldDirection(cameraDirection);
@@ -36,17 +64,18 @@ export default function ThirdPersonController({ avatarRef, children }: ThirdPers
     cameraRight.crossVectors(cameraDirection, new THREE.Vector3(0, 1, 0)).normalize();
 
     direction.current.set(0, 0, 0);
-
     if (keys.forward) direction.current.add(cameraDirection);
     if (keys.backward) direction.current.sub(cameraDirection);
     if (keys.left) direction.current.sub(cameraRight);
     if (keys.right) direction.current.add(cameraRight);
 
-    if (direction.current.length() > 0) {
+    const hasInput = direction.current.length() > 0;
+
+    if (hasInput) {
       direction.current.normalize();
       velocity.current.lerp(direction.current.multiplyScalar(speed * delta), 0.15);
 
-      // Rotate avatar to face movement direction
+      // Rotate avatar to face movement
       const angle = Math.atan2(direction.current.x, direction.current.z);
       const currentAngle = groupRef.current.rotation.y;
       const diff = angle - currentAngle;
@@ -56,47 +85,43 @@ export default function ThirdPersonController({ avatarRef, children }: ThirdPers
       velocity.current.multiplyScalar(DAMPING);
     }
 
-    // Apply velocity
-    groupRef.current.position.add(velocity.current);
+    // === COLLISION CHECK ===
+    const candidatePos = groupRef.current.position.clone().add(velocity.current);
+    if (checkCollision(candidatePos, AVATAR_RADIUS)) {
+      // Try sliding along X
+      const slideX = groupRef.current.position.clone();
+      slideX.x += velocity.current.x;
+      if (!checkCollision(slideX, AVATAR_RADIUS)) {
+        groupRef.current.position.x = slideX.x;
+      }
+      // Try sliding along Z
+      const slideZ = groupRef.current.position.clone();
+      slideZ.z += velocity.current.z;
+      if (!checkCollision(slideZ, AVATAR_RADIUS)) {
+        groupRef.current.position.z = slideZ.z;
+      }
+      velocity.current.multiplyScalar(0.3);
+    } else {
+      groupRef.current.position.add(velocity.current);
+    }
 
     // Clamp to world bounds
     groupRef.current.position.x = THREE.MathUtils.clamp(groupRef.current.position.x, -40, 40);
     groupRef.current.position.z = THREE.MathUtils.clamp(groupRef.current.position.z, -40, 40);
-    groupRef.current.position.y = 0; // Stay on ground
+    groupRef.current.position.y = 0;
 
-    // Simple "walking" animation - bob up and down
-    const isMoving = velocity.current.length() > 0.005;
-    if (isMoving && avatarRef.current) {
-      const bobSpeed = keys.shift ? 12 : 8;
-      const bobAmount = keys.shift ? 0.06 : 0.04;
-      avatarRef.current.position.y = Math.abs(Math.sin(state.clock.elapsedTime * bobSpeed)) * bobAmount;
-
-      // Slight lean forward when moving
-      avatarRef.current.rotation.x = 0.05;
-
-      // Arm swing
-      const armSwing = Math.sin(state.clock.elapsedTime * bobSpeed) * (keys.shift ? 0.3 : 0.15);
-      const leftArm = avatarRef.current.children[5]; // left arm
-      const rightArm = avatarRef.current.children[6]; // right arm
-      if (leftArm) leftArm.rotation.x = armSwing;
-      if (rightArm) rightArm.rotation.x = -armSwing;
-
-      // Leg swing
-      const legSwing = Math.sin(state.clock.elapsedTime * bobSpeed) * (keys.shift ? 0.4 : 0.2);
-      const leftLeg = avatarRef.current.children[11]; // left leg
-      const rightLeg = avatarRef.current.children[12]; // right leg
-      if (leftLeg) leftLeg.rotation.x = legSwing;
-      if (rightLeg) rightLeg.rotation.x = -legSwing;
-    } else if (avatarRef.current) {
-      // Idle breathing
-      avatarRef.current.position.y = Math.sin(state.clock.elapsedTime * 1.5) * 0.01;
-      avatarRef.current.rotation.x = 0;
+    // Update motion state for animation
+    const moving = velocity.current.length() > 0.005;
+    if (moving !== motionState.isMoving || keys.shift !== motionState.isRunning) {
+      setMotionState({ isMoving: moving, isRunning: keys.shift });
     }
   });
 
   return (
     <group ref={groupRef}>
-      {children}
+      {typeof children === 'function'
+        ? children(motionState)
+        : children}
     </group>
   );
 }

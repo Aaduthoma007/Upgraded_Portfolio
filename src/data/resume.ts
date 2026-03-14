@@ -89,7 +89,7 @@ export const education = [
   },
   {
     institution: 'Kristu Jayanti College (KJC)',
-    degree: 'Bachelor of Computer Applications (BCA) | Distinction',
+    degree: 'Bachelor of Computer Applications (BCA)',
     period: '2022 – 2025',
     location: 'Bengaluru, India',
   },

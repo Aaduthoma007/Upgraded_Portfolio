@@ -9,6 +9,8 @@ interface KeyState {
   right: boolean;
   shift: boolean;
   tab: boolean;
+  enter: boolean;
+  escape: boolean;
 }
 
 export function useKeyboard() {
@@ -19,6 +21,8 @@ export function useKeyboard() {
     right: false,
     shift: false,
     tab: false,
+    enter: false,
+    escape: false,
   });
 
   const tabPressedRef = useRef(false);
@@ -42,6 +46,8 @@ export function useKeyboard() {
         if (key === 'a' || key === 'arrowleft') next.left = true;
         if (key === 'd' || key === 'arrowright') next.right = true;
         if (key === 'shift') next.shift = true;
+        if (key === 'enter') next.enter = true;
+        if (key === 'escape') next.escape = true;
         return next;
       });
     };
@@ -61,6 +67,8 @@ export function useKeyboard() {
         if (key === 'a' || key === 'arrowleft') next.left = false;
         if (key === 'd' || key === 'arrowright') next.right = false;
         if (key === 'shift') next.shift = false;
+        if (key === 'enter') next.enter = false;
+        if (key === 'escape') next.escape = false;
         return next;
       });
     };

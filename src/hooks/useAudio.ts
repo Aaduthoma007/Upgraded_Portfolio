@@ -13,11 +13,21 @@ export function useAudio() {
   }, []);
 
   const initAndPreload = useCallback(async () => {
-    const engine = getAudioEngine();
-    engineRef.current = engine;
-    await engine.init();
-    await engine.preload('/audio/boring-track.mp3', '/audio/mass-track.mp3');
-    setAudioReady(true);
+    try {
+      const engine = getAudioEngine();
+      engineRef.current = engine;
+      await engine.init();
+      // Await only the small track so the UI unlocks instantly
+      await engine.preloadBoring('/audio/boring-track.mp3');
+      setAudioReady(true);
+
+      // Fire and forget the heavy mass track
+      engine.preloadMass('/audio/mass-track.mp3');
+    } catch (err) {
+      console.warn('Audio system failed to initialize:', err);
+      // Let the UI fall back gracefully by pretending audio is "ready" but silent
+      setAudioReady(true); 
+    }
   }, [setAudioReady]);
 
   const playBoring = useCallback(() => {

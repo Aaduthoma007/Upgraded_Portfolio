@@ -23,7 +23,7 @@ export default function HomePage() {
   const [hasInteracted, setHasInteracted] = useState(false);
   const [showBreach, setShowBreach] = useState(false);
 
-  // Handle first interaction — unlock audio
+  // Handle first interaction — unlock audio (used as fallback or explicit trigger)
   const handleFirstInteraction = useCallback(async () => {
     if (hasInteracted) return;
     setHasInteracted(true);
@@ -36,27 +36,49 @@ export default function HomePage() {
     setIsLoading(false);
   }, [hasInteracted, initAndPreload, playBoring]);
 
-  // Click anywhere to init audio
+  // Aggressively attempt to autoplay on load
   useEffect(() => {
-    const handler = () => handleFirstInteraction();
-    window.addEventListener('click', handler, { once: true });
-    window.addEventListener('keydown', handler, { once: true });
+    let mounted = true;
+    const attemptAutoplay = async () => {
+      try {
+        await initAndPreload();
+        playBoring();
+        if (mounted) {
+          setHasInteracted(true);
+          setIsLoading(false);
+        }
+      } catch (e) {
+        console.warn('Autoplay blocked by browser. Awaiting user interaction.');
+        if (mounted) {
+          setIsLoading(false); // Show the UI so the user CAN interact
+        }
+      }
+    };
+    attemptAutoplay();
+    return () => { mounted = false; };
+  }, [initAndPreload, playBoring]);
+
+  // Click anywhere fallback to init audio
+  useEffect(() => {
+    const handler = () => {
+      if (!hasInteracted) handleFirstInteraction();
+    };
+    window.addEventListener('click', handler);
+    window.addEventListener('keydown', handler);
     return () => {
       window.removeEventListener('click', handler);
       window.removeEventListener('keydown', handler);
     };
-  }, [handleFirstInteraction]);
+  }, [handleFirstInteraction, hasInteracted]);
 
-  // Auto-init (loading screen will show until ready)
+  // Preload heavy 3D scene in the background
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (isLoading && !hasInteracted) {
-        // Show the resume even before interaction
-        setIsLoading(false);
-      }
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [isLoading, hasInteracted]);
+    if (!isBreached) {
+      import('@/components/world/Scene').catch(() => {
+        console.warn('Silent preload of Scene failed');
+      });
+    }
+  }, [isBreached]);
 
   // TAB key for diagnostic mode
   useEffect(() => {
