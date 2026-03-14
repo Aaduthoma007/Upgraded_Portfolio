@@ -13,10 +13,12 @@ interface HoloPanelProps {
   title: string;
   titleColor?: string;
   children: React.ReactNode | ((opacity: number) => React.ReactNode);
+  readableContent?: React.ReactNode;
   width?: number;
   height?: number;
   avatarRef: React.RefObject<THREE.Group> | null;
   setInteractionState: React.Dispatch<React.SetStateAction<"idle" | "reading">>;
+  onOpenOverlay?: (title: string, titleColor: string, content: React.ReactNode) => void;
 }
 
 function HoloPanel({
@@ -25,10 +27,12 @@ function HoloPanel({
   title,
   titleColor = '#E8A87C',
   children,
+  readableContent,
   width = 3.5,
   height = 3,
   avatarRef,
   setInteractionState,
+  onOpenOverlay,
 }: HoloPanelProps) {
   const groupRef = useRef<THREE.Group>(null);
   const borderRef = useRef<THREE.Mesh>(null);
@@ -51,8 +55,12 @@ function HoloPanel({
       
       // Distance check
       if (avatarRef?.current) {
-        const dist = avatarRef.current.position.distanceTo(groupRef.current.position);
-        const near = dist < 4.0;
+        const avatarWorldPos = new THREE.Vector3();
+        avatarRef.current.getWorldPosition(avatarWorldPos);
+        const panelWorldPos = new THREE.Vector3();
+        groupRef.current.getWorldPosition(panelWorldPos);
+        const dist = avatarWorldPos.distanceTo(panelWorldPos);
+        const near = dist < 3.5;
         if (near !== inProximity) {
           setInProximity(near);
           if (!near && isReading) {
@@ -141,119 +149,45 @@ function HoloPanel({
 
       {/* Clickable VIEW button when near panel */}
       {inProximity && !isReading && (
-        <Html position={[0, -height / 2 - 0.3, 0.1]} center>
+        <Html position={[0, -height / 2 - 0.15, 0.1]} center style={{ pointerEvents: 'auto' }}>
           <button
-            onClick={() => { setIsReading(true); setInteractionState('reading'); }}
+            onClick={() => {
+              if (onOpenOverlay && readableContent) {
+                setIsReading(true);
+                onOpenOverlay(title, titleColor, readableContent);
+              }
+            }}
             style={{
               color: '#00e5ff',
               fontFamily: "'JetBrains Mono', monospace",
-              background: 'rgba(0, 20, 30, 0.9)',
-              border: '1.5px solid #00e5ff',
-              padding: '12px 32px',
-              borderRadius: '10px',
-              fontSize: '14px',
-              fontWeight: 600,
-              letterSpacing: '3px',
+              background: 'rgba(0, 15, 25, 0.7)',
+              border: '1px solid rgba(0, 229, 255, 0.4)',
+              padding: '6px 18px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 500,
+              letterSpacing: '1.5px',
               cursor: 'pointer',
-              boxShadow: '0 0 25px rgba(0,229,255,0.35), inset 0 0 15px rgba(0,229,255,0.08)',
               transition: 'all 0.3s ease',
               textTransform: 'uppercase' as const,
-              animation: 'btnPulse 2s infinite',
+              opacity: 0.85,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(0, 229, 255, 0.15)';
-              e.currentTarget.style.boxShadow = '0 0 40px rgba(0,229,255,0.5), inset 0 0 20px rgba(0,229,255,0.15)';
-              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.background = 'rgba(0, 229, 255, 0.12)';
+              e.currentTarget.style.borderColor = '#00e5ff';
+              e.currentTarget.style.opacity = '1';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(0, 20, 30, 0.9)';
-              e.currentTarget.style.boxShadow = '0 0 25px rgba(0,229,255,0.35), inset 0 0 15px rgba(0,229,255,0.08)';
-              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.background = 'rgba(0, 15, 25, 0.7)';
+              e.currentTarget.style.borderColor = 'rgba(0, 229, 255, 0.4)';
+              e.currentTarget.style.opacity = '0.85';
             }}
           >
-            ⟩ VIEW DETAILS
+            ⟩ view
           </button>
-          <style>{`
-            @keyframes btnPulse {
-              0%, 100% { box-shadow: 0 0 20px rgba(0,229,255,0.3); }
-              50% { box-shadow: 0 0 35px rgba(0,229,255,0.5); }
-            }
-          `}</style>
         </Html>
       )}
 
-      {/* Full-screen readable overlay when reading */}
-      {isReading && (
-        <Html fullscreen zIndexRange={[100, 0]}>
-          <div style={{
-            position: 'fixed',
-            top: 0, left: 0, width: '100vw', height: '100vh',
-            background: 'rgba(6, 9, 18, 0.92)',
-            backdropFilter: 'blur(12px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 999,
-          }}>
-            <div style={{
-              width: '90%',
-              maxWidth: '700px',
-              maxHeight: '80vh',
-              overflowY: 'auto',
-              background: 'rgba(14, 18, 32, 0.95)',
-              border: `1px solid ${titleColor}40`,
-              borderRadius: '16px',
-              padding: '32px 36px',
-              color: '#E6E1DC',
-              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-              fontSize: '13px',
-              lineHeight: '1.7',
-              boxShadow: `0 0 60px ${titleColor}20, 0 0 120px rgba(0,0,0,0.5)`,
-            }}>
-              {/* Header with BACK button */}
-              <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                borderBottom: `1px solid ${titleColor}30`, paddingBottom: '16px', marginBottom: '20px'
-              }}>
-                <div style={{ color: titleColor, fontSize: '15px', letterSpacing: '3px', fontWeight: 600 }}>
-                  {title}
-                </div>
-                <button
-                  onClick={() => { setIsReading(false); setInteractionState('idle'); }}
-                  style={{
-                    color: '#ff6b6b',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    background: 'rgba(255, 107, 107, 0.08)',
-                    border: '1px solid rgba(255, 107, 107, 0.4)',
-                    padding: '8px 20px',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    letterSpacing: '2px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    textTransform: 'uppercase' as const,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 107, 107, 0.2)';
-                    e.currentTarget.style.borderColor = '#ff6b6b';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 107, 107, 0.08)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 107, 107, 0.4)';
-                  }}
-                >
-                  ✕ BACK
-                </button>
-              </div>
-              {/* Render children content */}
-              <div>
-                {typeof children === 'function' ? children(1) : children}
-              </div>
-            </div>
-          </div>
-        </Html>
-      )}
 
       {/* Glow */}
       <pointLight position={[0, 0, 0.5]} color={titleColor} intensity={0.3} distance={4} />
@@ -298,9 +232,25 @@ function TextLine({
   );
 }
 
-export function ProjectsPanel(props: Omit<HoloPanelProps, 'position' | 'rotation' | 'title' | 'width' | 'height' | 'children'>) {
+export function ProjectsPanel(props: Omit<HoloPanelProps, 'position' | 'rotation' | 'title' | 'width' | 'height' | 'children' | 'readableContent'>) {
+  const htmlContent = (
+    <div>
+      {projects.map((p, pi) => (
+        <div key={pi} style={{ marginBottom: '24px' }}>
+          <div style={{ color: p.color, fontSize: '16px', fontWeight: 700 }}>{p.name}</div>
+          <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '4px' }}>{p.subtitle}</div>
+          <div style={{ color: '#E8A87C', fontSize: '11px', marginTop: '6px' }}>{p.stack.join(' · ')}</div>
+          <ul style={{ margin: '8px 0 0 0', padding: 0, listStyle: 'none' }}>
+            {p.bullets.map((b, bi) => (
+              <li key={bi} style={{ color: '#9a968f', fontSize: '12px', lineHeight: '1.7', marginTop: '4px' }}>› {b}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
   return (
-    <HoloPanel position={[-6, 2.5, -3]} rotation={[0, 0.4, 0]} title="▸ PROJECTS" width={4.5} height={5} {...props}>
+    <HoloPanel position={[-6, 2.5, -3]} rotation={[0, 0.4, 0]} title="▸ PROJECTS" width={4.5} height={5} readableContent={htmlContent} {...props}>
       {projects.map((p, pi) => {
         const yBase = 1.8 - pi * 1.6;
         return (
@@ -309,14 +259,7 @@ export function ProjectsPanel(props: Omit<HoloPanelProps, 'position' | 'rotation
             <TextLine text={p.subtitle} y={yBase - 0.22} color="#6B7280" size={0.1} />
             <TextLine text={p.stack.join(' · ')} y={yBase - 0.38} color="#E8A87C" size={0.09} />
             {p.bullets.map((b, bi) => (
-              <TextLine
-                key={bi}
-                text={`› ${b}`}
-                y={yBase - 0.56 - bi * 0.26}
-                color="#9a968f"
-                size={0.08}
-                maxW={4}
-              />
+              <TextLine key={bi} text={`› ${b}`} y={yBase - 0.56 - bi * 0.26} color="#9a968f" size={0.08} maxW={4} />
             ))}
           </group>
         );
@@ -325,9 +268,21 @@ export function ProjectsPanel(props: Omit<HoloPanelProps, 'position' | 'rotation
   );
 }
 
-export function ExperiencePanel(props: Omit<HoloPanelProps, 'position' | 'rotation' | 'title' | 'titleColor' | 'width' | 'height' | 'children'>) {
+export function ExperiencePanel(props: Omit<HoloPanelProps, 'position' | 'rotation' | 'title' | 'titleColor' | 'width' | 'height' | 'children' | 'readableContent'>) {
+  const htmlContent = (
+    <div>
+      <div style={{ fontSize: '16px', fontWeight: 700, color: '#E6E1DC' }}>{experience.title}</div>
+      <div style={{ color: '#E8A87C', fontSize: '13px', marginTop: '4px' }}>{experience.company}</div>
+      <div style={{ color: '#6B7280', fontSize: '11px', marginTop: '4px' }}>{experience.period}</div>
+      <ul style={{ margin: '12px 0 0 0', padding: 0, listStyle: 'none' }}>
+        {experience.bullets.map((b, i) => (
+          <li key={i} style={{ color: '#9a968f', fontSize: '12px', lineHeight: '1.7', marginTop: '6px' }}>› {b}</li>
+        ))}
+      </ul>
+    </div>
+  );
   return (
-    <HoloPanel position={[6, 2.5, -3]} rotation={[0, -0.4, 0]} title="▸ EXPERIENCE" titleColor="#6C9BCF" width={4.2} height={3.8} {...props}>
+    <HoloPanel position={[6, 2.5, -3]} rotation={[0, -0.4, 0]} title="▸ EXPERIENCE" titleColor="#6C9BCF" width={4.2} height={3.8} readableContent={htmlContent} {...props}>
       <TextLine text={experience.title} y={1.1} color="#E6E1DC" size={0.16} bold />
       <TextLine text={experience.company} y={0.85} color="#E8A87C" size={0.12} />
       <TextLine text={experience.period} y={0.65} color="#6B7280" size={0.1} />
@@ -338,9 +293,24 @@ export function ExperiencePanel(props: Omit<HoloPanelProps, 'position' | 'rotati
   );
 }
 
-export function EducationPanel(props: Omit<HoloPanelProps, 'position' | 'rotation' | 'title' | 'titleColor' | 'width' | 'height' | 'children'>) {
+export function EducationPanel(props: Omit<HoloPanelProps, 'position' | 'rotation' | 'title' | 'titleColor' | 'width' | 'height' | 'children' | 'readableContent'>) {
+  const htmlContent = (
+    <div>
+      {education.map((edu, i) => (
+        <div key={i} style={{ marginBottom: '16px' }}>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: '#E6E1DC' }}>{edu.degree}</div>
+          <div style={{ color: '#E8A87C', fontSize: '12px', marginTop: '4px' }}>{edu.institution}</div>
+          <div style={{ color: '#6B7280', fontSize: '11px', marginTop: '4px' }}>{edu.period} — {edu.location}</div>
+        </div>
+      ))}
+      <div style={{ color: '#D35F5F', fontSize: '12px', marginTop: '16px', textAlign: 'center', letterSpacing: '2px' }}>─── CERTIFICATIONS ───</div>
+      {certifications.map((cert, i) => (
+        <div key={i} style={{ color: '#9a968f', fontSize: '12px', marginTop: '8px' }}>◆ {cert}</div>
+      ))}
+    </div>
+  );
   return (
-    <HoloPanel position={[0, 2.8, -8]} rotation={[0, 0, 0]} title="▸ EDUCATION & CERTS" titleColor="#D35F5F" width={5} height={3.5} {...props}>
+    <HoloPanel position={[0, 2.8, -8]} rotation={[0, 0, 0]} title="▸ EDUCATION & CERTS" titleColor="#D35F5F" width={5} height={3.5} readableContent={htmlContent} {...props}>
       {education.map((edu, i) => {
         const yBase = 0.9 - i * 0.9;
         return (
@@ -359,7 +329,7 @@ export function EducationPanel(props: Omit<HoloPanelProps, 'position' | 'rotatio
   );
 }
 
-export function SkillsPanel(props: Omit<HoloPanelProps, 'position' | 'rotation' | 'title' | 'titleColor' | 'width' | 'height' | 'children'>) {
+export function SkillsPanel(props: Omit<HoloPanelProps, 'position' | 'rotation' | 'title' | 'titleColor' | 'width' | 'height' | 'children' | 'readableContent'>) {
   const categories = [
     { label: 'LANGUAGES', items: skills.languages, color: '#E8A87C' },
     { label: 'AI / ML', items: skills.ai, color: '#6C9BCF' },
@@ -368,21 +338,24 @@ export function SkillsPanel(props: Omit<HoloPanelProps, 'position' | 'rotation' 
     { label: 'SECURITY', items: skills.security, color: '#6C9BCF' },
     { label: 'DATA', items: skills.data, color: '#D35F5F' },
   ];
-
+  const htmlContent = (
+    <div>
+      {categories.map((cat, ci) => (
+        <div key={ci} style={{ marginBottom: '14px' }}>
+          <div style={{ color: cat.color, fontSize: '13px', fontWeight: 700, letterSpacing: '1px' }}>{cat.label}</div>
+          <div style={{ color: '#8a867f', fontSize: '12px', marginTop: '4px', lineHeight: '1.6' }}>{cat.items.join(' • ')}</div>
+        </div>
+      ))}
+    </div>
+  );
   return (
-    <HoloPanel position={[-4, 2.5, -7]} rotation={[0, 0.25, 0]} title="▸ SKILLS" titleColor="#E8A87C" width={4} height={5} {...props}>
+    <HoloPanel position={[-4, 2.5, -7]} rotation={[0, 0.25, 0]} title="▸ SKILLS" titleColor="#E8A87C" width={4} height={5} readableContent={htmlContent} {...props}>
       {categories.map((cat, ci) => {
         const yBase = 1.8 - ci * 0.78;
         return (
           <group key={ci}>
             <TextLine text={cat.label} y={yBase} color={cat.color} size={0.12} bold />
-            <TextLine
-              text={cat.items.join(' • ')}
-              y={yBase - 0.18}
-              color="#8a867f"
-              size={0.085}
-              maxW={3.5}
-            />
+            <TextLine text={cat.items.join(' • ')} y={yBase - 0.18} color="#8a867f" size={0.085} maxW={3.5} />
           </group>
         );
       })}
@@ -390,9 +363,19 @@ export function SkillsPanel(props: Omit<HoloPanelProps, 'position' | 'rotation' 
   );
 }
 
-export function IdentityPanel(props: Omit<HoloPanelProps, 'position' | 'rotation' | 'title' | 'titleColor' | 'width' | 'height' | 'children'>) {
+export function IdentityPanel(props: Omit<HoloPanelProps, 'position' | 'rotation' | 'title' | 'titleColor' | 'width' | 'height' | 'children' | 'readableContent'>) {
+  const htmlContent = (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: '22px', fontWeight: 700, color: '#E6E1DC' }}>{personalInfo.name}</div>
+      <div style={{ color: '#E8A87C', fontSize: '14px', marginTop: '8px' }}>Software Developer</div>
+      <div style={{ color: '#8a867f', fontSize: '12px', marginTop: '12px', lineHeight: '1.7' }}>{summary}</div>
+      <div style={{ marginTop: '20px', color: '#6C9BCF', fontSize: '12px' }}>✉ {personalInfo.email}</div>
+      <div style={{ color: '#6C9BCF', fontSize: '12px', marginTop: '6px' }}>⌂ {personalInfo.github}</div>
+      <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '6px' }}>☏ {personalInfo.phone}</div>
+    </div>
+  );
   return (
-    <HoloPanel position={[4, 2.5, -7]} rotation={[0, -0.25, 0]} title="▸ IDENTITY" titleColor="#6C9BCF" width={3.5} height={3} {...props}>
+    <HoloPanel position={[4, 2.5, -7]} rotation={[0, -0.25, 0]} title="▸ IDENTITY" titleColor="#6C9BCF" width={3.5} height={3} readableContent={htmlContent} {...props}>
       <TextLine text={personalInfo.name} y={0.7} color="#E6E1DC" size={0.28} bold align="center" xOffset={0} />
       <TextLine text="Software Developer" y={0.35} color="#E8A87C" size={0.14} align="center" xOffset={0} />
       <TextLine text={summary.slice(0, 150) + '...'} y={0.1} color="#8a867f" size={0.08} maxW={3} align="center" xOffset={0} />
