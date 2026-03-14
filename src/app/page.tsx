@@ -61,7 +61,12 @@ export default function HomePage() {
   // Click anywhere fallback to init audio
   useEffect(() => {
     const handler = () => {
-      if (!hasInteracted) handleFirstInteraction();
+      if (!hasInteracted) {
+        handleFirstInteraction();
+      } else {
+        // If autoplay silently suspended the AudioContext, this click will force it awake
+        playBoring(); 
+      }
     };
     window.addEventListener('click', handler);
     window.addEventListener('keydown', handler);
@@ -69,7 +74,7 @@ export default function HomePage() {
       window.removeEventListener('click', handler);
       window.removeEventListener('keydown', handler);
     };
-  }, [handleFirstInteraction, hasInteracted]);
+  }, [hasInteracted, handleFirstInteraction, playBoring]);
 
   // Preload heavy 3D scene in the background
   useEffect(() => {
