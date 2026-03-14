@@ -19,22 +19,22 @@ export default function BiometricScanner({ onScan }: BiometricScannerProps) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center gap-6">
+    <div className="auth-cta-wrapper">
       <button
-        onClick={handleClick} // Changed from handleScan to handleClick to match existing function name
+        className={`auth-cta ${isScanning ? 'scanning' : ''}`}
+        onClick={handleClick}
         disabled={isScanning}
-        className={`premium-auth-btn ${isScanning ? 'scanning' : ''}`}
         aria-label="Launch Immersive Mode"
       >
-        <div className="btn-content flex items-center gap-4">
-          <svg
-            className={`w-6 h-6 ${isScanning ? 'text-cyan-400' : 'text-gray-400'} transition-colors duration-300`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+        {/* Animated border */}
+        <div className="auth-border" />
+
+        {/* Custom Icon (replacing fingerprint) */}
+        <div className="auth-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
           </svg>
+          {isScanning && <div className="auth-scan-sweep" />}
         </div>
 
         {/* Text */}
@@ -47,19 +47,8 @@ export default function BiometricScanner({ onScan }: BiometricScannerProps) {
           </span>
         </div>
 
-        {/* Arrow */}
-        {!isScanning && (
-          <div className="auth-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </div>
-        )}
-
-        {/* Scanning spinner */}
-        {isScanning && (
-          <div className="auth-spinner" />
-        )}
+        {/* Loading Spinner */}
+        {isScanning && <div className="auth-spinner" />}
       </button>
     </div>
   );
