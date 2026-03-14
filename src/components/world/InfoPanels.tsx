@@ -139,29 +139,44 @@ function HoloPanel({
         </group>
       ))}
 
-      {/* Interaction Prompt */}
+      {/* Clickable VIEW button when near panel */}
       {inProximity && !isReading && (
-        <Html position={[0, 0, 0.1]} center>
-          <div style={{
-            color: '#00e5ff',
-            fontFamily: 'monospace',
-            background: 'rgba(0,20,30,0.85)',
-            border: '1px solid #00e5ff',
-            padding: '10px 20px',
-            whiteSpace: 'nowrap',
-            borderRadius: '8px',
-            fontSize: '14px',
-            letterSpacing: '2px',
-            boxShadow: '0 0 20px rgba(0,229,255,0.3)',
-            animation: 'pulse 1.5s infinite'
-          }}>
-            ⟩ PRESS ENTER TO VIEW
-          </div>
+        <Html position={[0, -height / 2 - 0.3, 0.1]} center>
+          <button
+            onClick={() => { setIsReading(true); setInteractionState('reading'); }}
+            style={{
+              color: '#00e5ff',
+              fontFamily: "'JetBrains Mono', monospace",
+              background: 'rgba(0, 20, 30, 0.9)',
+              border: '1.5px solid #00e5ff',
+              padding: '12px 32px',
+              borderRadius: '10px',
+              fontSize: '14px',
+              fontWeight: 600,
+              letterSpacing: '3px',
+              cursor: 'pointer',
+              boxShadow: '0 0 25px rgba(0,229,255,0.35), inset 0 0 15px rgba(0,229,255,0.08)',
+              transition: 'all 0.3s ease',
+              textTransform: 'uppercase' as const,
+              animation: 'btnPulse 2s infinite',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 229, 255, 0.15)';
+              e.currentTarget.style.boxShadow = '0 0 40px rgba(0,229,255,0.5), inset 0 0 20px rgba(0,229,255,0.15)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 20, 30, 0.9)';
+              e.currentTarget.style.boxShadow = '0 0 25px rgba(0,229,255,0.35), inset 0 0 15px rgba(0,229,255,0.08)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            ⟩ VIEW DETAILS
+          </button>
           <style>{`
-            @keyframes pulse {
-              0% { opacity: 0.6; box-shadow: 0 0 5px #00e5ff; }
-              50% { opacity: 1; box-shadow: 0 0 20px #00e5ff; }
-              100% { opacity: 0.6; box-shadow: 0 0 5px #00e5ff; }
+            @keyframes btnPulse {
+              0%, 100% { box-shadow: 0 0 20px rgba(0,229,255,0.3); }
+              50% { box-shadow: 0 0 35px rgba(0,229,255,0.5); }
             }
           `}</style>
         </Html>
@@ -195,7 +210,7 @@ function HoloPanel({
               lineHeight: '1.7',
               boxShadow: `0 0 60px ${titleColor}20, 0 0 120px rgba(0,0,0,0.5)`,
             }}>
-              {/* Header */}
+              {/* Header with BACK button */}
               <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 borderBottom: `1px solid ${titleColor}30`, paddingBottom: '16px', marginBottom: '20px'
@@ -203,11 +218,33 @@ function HoloPanel({
                 <div style={{ color: titleColor, fontSize: '15px', letterSpacing: '3px', fontWeight: 600 }}>
                   {title}
                 </div>
-                <div style={{
-                  color: '#6B7280', fontSize: '11px', letterSpacing: '1px',
-                }}>
-                  PRESS ENTER OR ESC TO CLOSE
-                </div>
+                <button
+                  onClick={() => { setIsReading(false); setInteractionState('idle'); }}
+                  style={{
+                    color: '#ff6b6b',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    background: 'rgba(255, 107, 107, 0.08)',
+                    border: '1px solid rgba(255, 107, 107, 0.4)',
+                    padding: '8px 20px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    letterSpacing: '2px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    textTransform: 'uppercase' as const,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 107, 107, 0.2)';
+                    e.currentTarget.style.borderColor = '#ff6b6b';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 107, 107, 0.08)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 107, 107, 0.4)';
+                  }}
+                >
+                  ✕ BACK
+                </button>
               </div>
               {/* Render children content */}
               <div>
