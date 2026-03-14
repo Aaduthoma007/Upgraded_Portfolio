@@ -99,12 +99,6 @@ function CommandCenterFloor() {
         infiniteGrid
       />
 
-      {/* Ground glow lights */}
-      <pointLight position={[0, 0.1, 0]} color="#00e5ff" intensity={0.15} distance={10} />
-      <pointLight position={[8, 0.1, -4]} color="#6C9BCF" intensity={0.08} distance={6} />
-      <pointLight position={[-8, 0.1, -4]} color="#E8A87C" intensity={0.08} distance={6} />
-
-      {/* Ground plane — dark reflective */}
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.01, 0]} receiveShadow>
         <planeGeometry args={[300, 300]} />
         <meshPhysicalMaterial color="#040810" roughness={0.7} metalness={0.3} clearcoat={0.15} />
